@@ -15,7 +15,7 @@ MYSQL_ROOT_PASSWORD="$(read_secret /run/secrets/db_root_password)"
 
 export MYSQL_PASSWORD MYSQL_ROOT_PASSWORD
 
-# Generate AQL from template
+# Generate SQL from template
 envsubst < /etc/mysql/init.sql.template > /etc/mysql/init.sql
 
 # Initialise database if needed

@@ -6,17 +6,28 @@ services:
       - db_password
       - db_root_password
     volumes:
-      - mariadb_data:/var/lib/mysql
+      - mariadb_data:/home/tiatan/data/db
+    networks:
+      - inception
+  nginx:
+    build: requirements/nginx
+    ports:
+      - "443:443"
+    networks:
+      - inception
+    volumes:
+      - ./requirements/nginx/tools/ssl/nginx.crt:/etc/ssl/certs/nginx.crt
+      - ./requirements/nginx/tools/ssl/nginx.key:/etc/ssl/private/nginx.key
+      - ./requirements/wordpress:/var/www/html
+      - ./requirements/nginx/conf/nginx.conf:/etc/nginx/nginx.conf
+  wordpress:
+    build: requirements/wordpress
     networks:
       - inception
 
 volumes:
   mariadb_data:
     driver: local
-    driver_opts:
-      type: none
-      device: /Users/ryan/data/
-      o: bind
 
 secrets:
   db_password:
