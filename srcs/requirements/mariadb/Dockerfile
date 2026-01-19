@@ -1,15 +1,19 @@
 FROM debian:12
 
 RUN apt-get update && \
-	    apt-get install -y mariadb-server gettext-base && \
-	    rm -rf /var/lib/apt-get/lists/*
+    apt-get install -y mariadb-server mariadb-client gettext-base && \
+    rm -rf /var/lib/apt/lists/*
 
-COPY conf/db.cnf /etc/mysql/db.cnf
-COPY tools/entrypoint.sh /entrypoint.sh
-COPY tools/init.sql.template /etc/mysql/init.sql.template
+RUN mkdir -p /var/lib/mysql /var/run/mysqld && \
+    chown -R mysql:mysql /var/lib/mysql /var/run/mysqld
 
-RUN chmod +x /entrypoint.sh
+COPY tools/setup.sh /setup.sh
+RUN chmod +x /setup.sh
+
+RUN sed -i "s/127.0.0.1/0.0.0.0/" /etc/mysql/mariadb.conf.d/50-server.cnf
+
+USER mysql
 
 EXPOSE 3306
+ENTRYPOINT ["/setup.sh"]
 
-ENTRYPOINT ["/entrypoint.sh"]
