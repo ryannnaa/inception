@@ -1,61 +1,56 @@
-#!/bin/sh
-set -e
+#!/bin/bash
 
-WP_PATH="/var/www/html"
+#keys for the wordpress
+export WP_ADMIN_PW=$(cat /run/secrets/wp_admin_password)
+export WP_USER_PW=$(cat /run/secrets/wp_user_password)
+export WORDPRESS_DB_PASSWORD=$(cat /run/secrets/db_password)
 
-# --- Read secrets and export environment variables ---
-export MYSQL_PASSWORD="$(tr -d '\n' < /run/secrets/db_password)"
-export MYSQL_USER="$MYSQL_USER"
-export MYSQL_DATABASE="$MYSQL_DATABASE"
-export MYSQL_HOST="$MYSQL_HOST"
+#check wp-config file
+if [ ! -f /var/www/html/wp-config.php ]; then
 
-export WP_ADMIN_PASSWORD="$(tr -d '\n' < /run/secrets/wp_admin_password)"
-export WP_USER_PASSWORD="$(tr -d '\n' < /run/secrets/wp_user_password)"
+    #clean existing files
+    echo "Deleting existing files under /var/www/html..."
+    rm -rf /var/www/html/*
 
-# --- Wait for MariaDB to be ready ---
-echo "[WordPress] Waiting for MariaDB to be ready..."
-until mysqladmin ping -h"$MYSQL_HOST" -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" --silent; do
-    sleep 2
-done
-echo "[WordPress] MariaDB is ready."
-
-# --- Navigate to WordPress path ---
-cd "$WP_PATH"
-
-# --- Install WordPress if not already installed ---
-if [ ! -f wp-config.php ]; then
-    echo "[WordPress] Downloading WordPress core..."
+    #download wp-cli
+    echo "Downloading wp-cli..."
     wp core download --allow-root
 
-    echo "[WordPress] Creating wp-config.php..."
+    #unpacking wp-config.php
+    echo "Unpacking wp-config.php file..."
     wp config create \
-        --allow-root \
-        --dbname="$MYSQL_DATABASE" \
-        --dbuser="$MYSQL_USER" \
-        --dbpass="$MYSQL_PASSWORD" \
-        --dbhost="$MYSQL_HOST" \
-        --skip-check
+    --dbname=$MYSQL_DATABASE \
+    --dbuser=$MYSQL_USER \
+    --dbpass=$WORDPRESS_DB_PASSWORD \
+    --dbhost=$MYSQL_HOST \
+    --allow-root
+    
+    #wait database to be ready
+    echo "Waiting for database..."
+    until wp db check --allow-root 2>/dev/null; do
+        echo "Database in progress..."
+        sleep 3
+    done
 
-    echo "[WordPress] Installing WordPress..."
+    #installation
+    echo "Installing wp-core..."
     wp core install \
-        --allow-root \
-        --url="https://${DOMAIN_NAME}" \
-        --title="Inception Site" \
-        --admin_user="admin" \
-        --admin_password="$WP_ADMIN_PASSWORD" \
-        --admin_email="admin@${DOMAIN_NAME}"
+    --admin_user=$WP_ADMIN \
+    --admin_password=$WP_ADMIN_PW \
+    --url=$DOMAIN_NAME \
+    --title=$TITLE \
+    --admin_email=$WP_ADMIN_EMAIL \
+    --allow-root
 
-    echo "[WordPress] Creating normal user..."
-    wp user create wp_user "user@${DOMAIN_NAME}" \
-        --user_pass="$WP_USER_PASSWORD" \
-        --allow-root
+    #user creation
+    wp user create $WP_USER $WP_USER_EMAIL \
+    --role=author \
+    --user_pass=$WP_USER_PW \
+    --allow-root
 
-    echo "[WordPress] Setting ownership..."
-    chown -R www-data:www-data "$WP_PATH"
-else
-    echo "[WordPress] WordPress already installed."
 fi
 
-# --- Start PHP-FPM ---
-exec php-fpm8.2 -F
+#start PHP-FPM in the foreground
+echo "Starting PHP-FPM..."
+exec /usr/sbin/php-fpm8.2 -F
 

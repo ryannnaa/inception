@@ -1,20 +1,34 @@
-FROM php:8.2-fpm
+FROM debian:12
+
+#install required requirements
+RUN apt-get update && apt-get upgrade -y && apt-get install -y \
+    curl \
+    nano \
+    php-fpm \
+    php-cli \
+    php-mysqli \
+    mariadb-client
+
+#configure the wordpress to listen on 9000 instead of its default as listening on the socket
+RUN sed -i 's|^listen = .*|listen = 0.0.0.0:9000|' \
+    /etc/php/8.2/fpm/pool.d/www.conf
+
+#install the wp-cli
+RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+
+#change the permission
+RUN chmod +x wp-cli.phar
+
+#move the executable phar to the default path so that could be exectued directly using wp
+RUN mv wp-cli.phar /usr/local/bin/wp
 
 WORKDIR /var/www/html
 
-RUN apt-get update && \
-    apt-get install -y libzip-dev unzip curl default-mysql-client && \
-    docker-php-ext-install mysqli pdo pdo_mysql zip && \
-    rm -rf /var/lib/apt/lists/*
+COPY /tools/setup.sh /setup.sh
 
-# Copy your setup script
-COPY tools/setup.sh /setup.sh
 RUN chmod +x /setup.sh
 
-# Ensure proper permissions on the working directory
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html
+EXPOSE 9000
 
-# Run setup script as CMD
 CMD ["/setup.sh"]
 

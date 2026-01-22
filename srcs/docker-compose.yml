@@ -54,15 +54,9 @@ services:
 
 volumes:
   db:
-    driver_opts:
-      type: 'none'
-      o: bind
-      device: /home/tiatan/data/mariadb
+    driver: local
   wp:
-    driver_opts:
-      type: 'none'
-      o: bind
-      device: /home/tiatan/data/wordpress
+    driver: local
 
 secrets:
   db_password:
@@ -78,5 +72,4 @@ networks:
   inception:
     name: inception
     driver: bridge
-
 
