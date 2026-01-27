@@ -38,7 +38,7 @@ make
 Or alternatively:
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 The `-d` flag runs containers in detached mode (background). The services will:
@@ -48,12 +48,16 @@ The `-d` flag runs containers in detached mode (background). The services will:
 
 **Expected output:**
 ```
-Creating network "inception_network" ...
-Creating volume "inception_mariadb_data" ...
-Creating volume "inception_wordpress_data" ...
-Creating mariadb ... done
-Creating wordpress ... done
-Creating nginx ... done
+✔ Image mariadb         Built                                                                     
+✔ Image wordpress       Built                                                                     
+✔ Image nginx           Built                                                                     
+✔ Network inception     Created                                                                   
+✔ Volume srcs_wp        Created                                                                   
+✔ Volume srcs_db        Created                                                                   
+✔ Container mariadb-1   Healthy                                                                   
+✔ Container wordpress-1 Created                                                                   
+✔ Container nginx-1     Created                                                                   
+
 ```
 
 ---
@@ -69,7 +73,7 @@ make down
 Or:
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
 This stops and removes containers but **preserves your data** in Docker volumes.
@@ -100,7 +104,7 @@ https://tiatan.42.fr/wp-admin
 
 ### Locating Credentials
 
-Credentials are stored securely using Docker secrets in the `.env` file at the root of the project.
+Credentials are stored securely using Docker secrets in the secrets folder at the root of the project.
 
 **Default .env structure:**
 ```env
@@ -108,20 +112,15 @@ Credentials are stored securely using Docker secrets in the `.env` file at the r
 DOMAIN_NAME=tiatan.42.fr
 
 # MariaDB Configuration
-MYSQL_ROOT_PASSWORD=secure_root_password
+MYSQL_USER=wp_user
 MYSQL_DATABASE=wordpress
-MYSQL_USER=wordpress_user
-MYSQL_PASSWORD=secure_user_password
 
 # WordPress Configuration
-WP_ADMIN_USER=admin
-WP_ADMIN_PASSWORD=secure_admin_password
-WP_ADMIN_EMAIL=admin@tiatan.42.fr
-WP_TITLE=Inception WordPress
-
-WP_USER=editor
-WP_USER_PASSWORD=secure_editor_password
-WP_USER_EMAIL=editor@tiatan.42.fr
+WP_USER=user
+WP_ADMIN=admin
+WP_USER_EMAIL=user@mail.com
+WP_ADMIN_EMAIL=admin@mail.com
+TITLE=wordpress
 ```
 
 ### WordPress Credentials
@@ -130,8 +129,8 @@ WP_USER_EMAIL=editor@tiatan.42.fr
 - Username: Value of `WP_ADMIN_USER` (default: `admin`)
 - Password: Value of `WP_ADMIN_PASSWORD`
 
-**Editor Account:**
-- Username: Value of `WP_USER` (default: `editor`)
+**User Account:**
+- Username: Value of `WP_USER` (default: `user`)
 - Password: Value of `WP_USER_PASSWORD`
 
 ### Database Credentials
@@ -179,16 +178,19 @@ WP_USER_EMAIL=editor@tiatan.42.fr
 Check if all containers are running:
 
 ```bash
-docker-compose ps
+docker ps
 ```
 
 **Expected output:**
 ```
-    Name                   Command               State          Ports
---------------------------------------------------------------------------------
-inception_mariadb_1    docker-entrypoint.sh mysqld    Up      3306/tcp
-inception_nginx_1      nginx -g daemon off;           Up      0.0.0.0:443->443/tcp
-inception_wordpress_1  php-fpm -F                     Up      9000/tcp
+CONTAINER ID   IMAGE       COMMAND                  CREATED             STATUS                       PORT
+S                                     NAMES
+19f56e9baa90   nginx       "nginx -g 'daemon of…"   About an hour ago   Up About an hour             0.0.
+0.0:443->443/tcp, [::]:443->443/tcp   nginx-1
+d7ad3a7eba2f   wordpress   "/setup.sh"              About an hour ago   Up About an hour             9000
+/tcp                                  wordpress-1
+2f3d55ad5263   mariadb     "/setup.sh"              About an hour ago   Up About an hour (healthy)   3306
+/tcp                                  mariadb-1
 ```
 
 All services should show `Up` in the State column.
@@ -198,21 +200,21 @@ All services should show `Up` in the State column.
 View logs for all services:
 
 ```bash
-docker-compose logs
+docker logs
 ```
 
 View logs for a specific service:
 
 ```bash
-docker-compose logs nginx
-docker-compose logs wordpress
-docker-compose logs mariadb
+docker logs nginx
+docker logs wordpress
+docker logs mariadb
 ```
 
 Follow logs in real-time:
 
 ```bash
-docker-compose logs -f
+docker logs -f
 ```
 
 ### Individual Container Status
@@ -264,15 +266,15 @@ EXIT;
 
 ### Issue: Browser shows "Connection refused"
 **Solution:** 
-- Verify services are running: `docker-compose ps`
-- Check NGINX logs: `docker-compose logs nginx`
+- Verify services are running: `docker ps`
+- Check NGINX logs: `docker logs nginx`
 - Ensure port 443 is not blocked by firewall
 
 ### Issue: "Database connection error" in WordPress
 **Solution:**
-- Check MariaDB is running: `docker-compose ps mariadb`
+- Check MariaDB is running: `docker ps`
 - Verify database credentials in `.env` match
-- Check MariaDB logs: `docker-compose logs mariadb`
+- Check MariaDB logs: `docker logs mariadb`
 
 ### Issue: Changes to `.env` not taking effect
 **Solution:**
@@ -304,59 +306,15 @@ This shows CPU, memory, network, and disk usage for each container in real-time.
 Restart all services:
 
 ```bash
-docker-compose restart
+docker restart
 ```
 
 Restart a specific service:
 
 ```bash
-docker-compose restart nginx
-docker-compose restart wordpress
-docker-compose restart mariadb
-```
-
----
-
-## 📁 Backup and Restore
-
-### Creating a Backup
-
-Export WordPress data volume:
-
-```bash
-docker run --rm -v inception_wordpress_data:/data -v $(pwd):/backup alpine tar czf /backup/wordpress_backup.tar.gz -C /data .
-```
-
-Export MariaDB data volume:
-
-```bash
-docker run --rm -v inception_mariadb_data:/data -v $(pwd):/backup alpine tar czf /backup/mariadb_backup.tar.gz -C /data .
-```
-
-### Restoring from Backup
-
-Stop services:
-
-```bash
-make down
-```
-
-Restore WordPress volume:
-
-```bash
-docker run --rm -v inception_wordpress_data:/data -v $(pwd):/backup alpine sh -c "cd /data && tar xzf /backup/wordpress_backup.tar.gz"
-```
-
-Restore MariaDB volume:
-
-```bash
-docker run --rm -v inception_mariadb_data:/data -v $(pwd):/backup alpine sh -c "cd /data && tar xzf /backup/mariadb_backup.tar.gz"
-```
-
-Restart services:
-
-```bash
-make
+docker restart nginx
+docker restart wordpress
+docker restart mariadb
 ```
 
 ---
@@ -365,8 +323,8 @@ make
 
 If you encounter issues:
 
-1. Check the logs: `docker-compose logs`
-2. Verify service status: `docker-compose ps`
+1. Check the logs: `docker compose logs`
+2. Verify service status: `docker compose ps`
 3. Consult the Developer Documentation (DEV_DOC.md)
 4. Review container configuration in `docker-compose.yml`
 

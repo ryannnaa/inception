@@ -58,6 +58,7 @@ The application stack consists of the following services:
 ### 💾 Persistent Volumes
 - One volume for **MariaDB data**
 - One volume for **WordPress files**
+- Named volumes instead of bind mounts
 
 ---
 
