@@ -3,8 +3,6 @@ set -e
 
 MYSQL_DATA_DIR="/var/lib/mysql"
 
-rm -rf $MYSQL_DATA_DIR/*
-
 echo "=== Reading secrets ==="
 echo "Root password file exists: $(test -f /run/secrets/db_root_password && echo YES || echo NO)"
 echo "User password file exists: $(test -f /run/secrets/db_password && echo YES || echo NO)"
@@ -46,8 +44,9 @@ if [ -z "$DB_NAME" ] || [ -z "$DB_USER" ] || [ -z "$ROOT_PASSWORD" ] || [ -z "$U
 fi
 
 # Check if this is first run
-if [ ! -d "$MYSQL_DATA_DIR/mysql" ]; then
+if [ ! -f "$MYSQL_DATA_DIR/created.txt" ]; then
     echo "[MariaDB] First run - initializing database..."
+    touch $MYSQL_DATA_DIR/created.txt
     
     # Initialize the database
     mariadb-install-db --user=mysql --datadir="$MYSQL_DATA_DIR"
@@ -93,8 +92,6 @@ EOF
     echo "[MariaDB] Database initialized and configured"
 else
     echo "[MariaDB] Database already initialized - SKIPPING SETUP"
-    CREATE USER IF NOT EXISTS '${DB_USER}'@'%' IDENTIFIED BY '${USER_PASSWORD}';
-    GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'%';
     echo "[MariaDB] Contents of $MYSQL_DATA_DIR:"
     ls -la "$MYSQL_DATA_DIR/"
 fi
