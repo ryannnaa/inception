@@ -65,9 +65,9 @@ docker compose version
 If using standalone Docker Compose v1:
 
 ```bash
-sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
-docker-compose --version
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/bar
+sudo chmod +x /usr/local/bin/bar
+bar --version
 ```
 
 #### GNU Make
@@ -109,45 +109,24 @@ Verify:
 ping tiatan.42.fr
 ```
 
-### 3. Create Environment File
+### 3. Create Password Files
 
-Copy the example environment file:
+Create the following files:
+credentials.txt
+db_password.txt
+db_root_password.txt
+wp_admin_password.txt
+wp_user_password.txt
 
 ```bash
-cp .env.example .env
-```
-
-Or create `.env` manually with the following structure:
-
-```env
-# Domain Configuration
-DOMAIN_NAME=tiatan.42.fr
-
-# MariaDB Root Credentials
-MYSQL_ROOT_PASSWORD=strong_root_password_here
-
-# WordPress Database Configuration
-MYSQL_DATABASE=wordpress
-MYSQL_USER=wordpress_user
-MYSQL_PASSWORD=strong_db_password_here
-
-# WordPress Admin User
-WP_ADMIN_USER=admin
-WP_ADMIN_PASSWORD=strong_admin_password_here
-WP_ADMIN_EMAIL=admin@tiatan.42.fr
-WP_TITLE=Inception WordPress
-
-# WordPress Additional User
-WP_USER=editor
-WP_USER_PASSWORD=strong_editor_password_here
-WP_USER_EMAIL=editor@tiatan.42.fr
+echo example_password > db_password.txt
 ```
 
 **Security Best Practices:**
 
 - Use strong, unique passwords (16+ characters)
-- Never commit `.env` to version control
-- Add `.env` to `.gitignore`
+- Never commit password files to version control
+- Add password files to `.gitignore`
 
 ### 4. Generate SSL Certificates
 
@@ -170,31 +149,35 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 inception/
 ├── Makefile                    # Build automation
 ├── docker-compose.yml          # Service orchestration
-├── .env                        # Environment variables (not in git)
-├── .env.example               # Template for .env
+├── .env                        # Environment variables
 ├── README.md                   # Project overview
-├── USER_DOC.md                # User documentation
-├── DEV_DOC.md                 # Developer documentation (this file)
-└── srcs/
+├── USER_DOC.md                 # User documentation
+├── DEV_DOC.md                  # Developer documentation (this file)
+├── secrets/                    # Empty folder or not included (password files in .gitignore)
+│   ├── db_password.txt
+│   ├── db_root_password.txt
+│   ├── wp_admin_password.txt
+│   └── wp_user_password.txt
+└──── srcs/
     └── requirements/
         ├── mariadb/
-        │   ├── Dockerfile      # MariaDB container definition
+        │   ├── Dockerfile         # MariaDB container definition
         │   ├── conf/
         │   │   └── 50-server.cnf  # MariaDB configuration
         │   └── tools/
         │       └── entrypoint.sh  # MariaDB initialization script
         ├── wordpress/
-        │   ├── Dockerfile      # WordPress container definition
+        │   ├── Dockerfile         # WordPress container definition
         │   ├── conf/
-        │   │   └── www.conf    # PHP-FPM pool configuration
+        │   │   └── www.conf       # PHP-FPM pool configuration
         │   └── tools/
         │       └── entrypoint.sh  # WordPress setup script
         └── nginx/
-            ├── Dockerfile      # NGINX container definition
+            ├── Dockerfile         # NGINX container definition
             ├── conf/
-            │   └── nginx.conf  # NGINX server configuration
+            │   └── nginx.conf     # NGINX server configuration
             └── tools/
-                └── certs/      # SSL certificates
+                └── certs/         # SSL certificates
 ```
 
 ---
@@ -210,7 +193,7 @@ The Makefile provides convenient commands for common operations:
 make
 
 # Equivalent to:
-make all
+make up 
 ```
 
 **What this does:**
@@ -224,16 +207,16 @@ make all
 
 ```bash
 # Build images without starting containers
-docker-compose build
+docker compose build
 
 # Build with no cache (clean build)
-docker-compose build --no-cache
+docker compose build --no-cache
 
 # Build and start services
-docker-compose up -d
+docker compose up -d
 
 # Build, recreate containers, and start
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
 ### Build Process Details
@@ -259,10 +242,10 @@ docker-compose up -d --build
 
 ```bash
 # Verbose build output
-docker-compose build --progress=plain
+docker compose build --progress=plain
 
 # Build specific service
-docker-compose build nginx
+docker compose build nginx
 ```
 
 ---
@@ -273,58 +256,58 @@ docker-compose build nginx
 
 ```bash
 # Start all services in background
-docker-compose up -d
+docker compose up -d
 
 # Start specific service
-docker-compose up -d nginx
+docker compose up -d nginx
 
 # Start with logs visible
-docker-compose up
+docker compose up
 
 # Start and rebuild if Dockerfile changed
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
 ### Stopping Containers
 
 ```bash
 # Stop all services (containers remain)
-docker-compose stop
+docker compose stop
 
 # Stop specific service
-docker-compose stop nginx
+docker compose stop nginx
 
 # Stop and remove containers
-docker-compose down
+docker compose down
 
 # Stop, remove containers, and remove networks
-docker-compose down --remove-orphans
+docker compose down --remove-orphans
 ```
 
 ### Restarting Containers
 
 ```bash
 # Restart all services
-docker-compose restart
+docker compose restart
 
 # Restart specific service
-docker-compose restart wordpress
+docker compose restart wordpress
 
 # Force recreate containers
-docker-compose up -d --force-recreate
+docker compose up -d --force-recreate
 ```
 
 ### Viewing Container Status
 
 ```bash
 # List running containers
-docker-compose ps
+docker compose ps
 
 # Detailed container information
-docker inspect inception_nginx_1
+docker inspect nginx-1
 
 # View container processes
-docker-compose top
+docker compose top
 
 # Real-time container statistics
 docker stats
@@ -334,36 +317,36 @@ docker stats
 
 ```bash
 # Execute bash in running container
-docker exec -it inception_nginx_1 bash
-docker exec -it inception_wordpress_1 bash
-docker exec -it inception_mariadb_1 bash
+docker exec -it nginx-1 bash
+docker exec -it wordpress-1 bash
+docker exec -it mariadb-1 bash
 
 # Execute command without entering shell
-docker exec inception_wordpress_1 wp --info --allow-root
+docker exec wordpress-1 --info --allow-root
 
 # Run as specific user
-docker exec -u www-data inception_wordpress_1 ls -la /var/www/html
+docker exec -u www-data wordpress-1 ls -la /var/www/html
 ```
 
 ### Viewing Logs
 
 ```bash
 # All service logs
-docker-compose logs
+bar logs
 
 # Specific service logs
-docker-compose logs nginx
-docker-compose logs wordpress
-docker-compose logs mariadb
+bar logs nginx
+bar logs wordpress
+bar logs mariadb
 
 # Follow logs (real-time)
-docker-compose logs -f
+bar logs -f
 
 # Last 100 lines
-docker-compose logs --tail=100
+bar logs --tail=100
 
 # Logs since timestamp
-docker-compose logs --since 2024-01-27T10:00:00
+bar logs --since 2024-01-27T10:00:00
 ```
 
 ---
@@ -422,7 +405,7 @@ docker run --rm \
   alpine tar czf /backup/mariadb_$(date +%Y%m%d_%H%M%S).tar.gz -C /data .
 
 # Backup using SQL dump (recommended for MariaDB)
-docker exec inception_mariadb_1 mysqldump -u root -p${MYSQL_ROOT_PASSWORD} --all-databases > backup_$(date +%Y%m%d_%H%M%S).sql
+docker exec mariadb-1 mysqldump -u root -p${MYSQL_ROOT_PASSWORD} --all-databases > backup_$(date +%Y%m%d_%H%M%S).sql
 ```
 
 #### Restoring Volumes
@@ -435,7 +418,7 @@ docker run --rm \
   alpine sh -c "cd /data && tar xzf /backup/wordpress_backup.tar.gz"
 
 # Restore MariaDB from SQL dump
-docker exec -i inception_mariadb_1 mysql -u root -p${MYSQL_ROOT_PASSWORD} < backup.sql
+docker exec -i mariadb-1 mysql -u root -p${MYSQL_ROOT_PASSWORD} < backup.sql
 ```
 
 #### Removing Volumes
@@ -444,8 +427,8 @@ docker exec -i inception_mariadb_1 mysql -u root -p${MYSQL_ROOT_PASSWORD} < back
 # Remove all project volumes (DESTRUCTIVE)
 docker volume rm inception_mariadb_data inception_wordpress_data
 
-# Remove using docker-compose (stops containers first)
-docker-compose down -v
+# Remove using bar (stops containers first)
+bar down -v
 
 # Using Makefile (complete cleanup)
 make fclean
@@ -467,7 +450,7 @@ The Makefile provides the following targets:
 ```bash
 # Build and start services
 make
-make all
+make up
 
 # Stop and remove containers
 make down
@@ -489,13 +472,13 @@ make help
 
 ```makefile
 all:
-	docker-compose up -d --build
+	bar up -d --build
 
 down:
-	docker-compose down
+	bar down
 
 clean:
-	docker-compose down --remove-orphans
+	bar down --remove-orphans
 
 fclean: clean
 	docker volume rm inception_mariadb_data inception_wordpress_data || true
@@ -516,7 +499,7 @@ The project creates a dedicated bridge network:
 
 ```yaml
 networks:
-  inception_network:
+  inception:
     driver: bridge
 ```
 
@@ -550,10 +533,10 @@ Services communicate using container names as hostnames:
 
 ```bash
 # From NGINX container to WordPress
-docker exec inception_nginx_1 ping wordpress
+docker exec nginx-1 ping wordpress
 
 # From WordPress container to MariaDB
-docker exec inception_wordpress_1 ping mariadb
+docker exec wordpress-1 ping mariadb
 ```
 
 ---
@@ -564,36 +547,36 @@ docker exec inception_wordpress_1 ping mariadb
 
 ```bash
 # Check container health
-docker inspect inception_mariadb_1 --format='{{.State.Health.Status}}'
+docker inspect mariadb-1 --format='{{.State.Health.Status}}'
 
 # View container environment variables
-docker exec inception_wordpress_1 env
+docker exec wordpress-1 env
 
 # Check listening ports
-docker exec inception_nginx_1 netstat -tlnp
+docker exec nginx-1 netstat -tlnp
 
 # Test PHP-FPM
-docker exec inception_wordpress_1 php-fpm -t
+docker exec wordpress-1 php-fpm -t
 
 # Test NGINX configuration
-docker exec inception_nginx_1 nginx -t
+docker exec nginx-1 nginx -t
 
 # Check MariaDB status
-docker exec inception_mariadb_1 mysqladmin -u root -p${MYSQL_ROOT_PASSWORD} status
+docker exec mariadb-1 mysqladmin -u root -p${MYSQL_ROOT_PASSWORD} status
 ```
 
 ### Container Logs Analysis
 
 ```bash
 # Check for errors in logs
-docker-compose logs | grep -i error
-docker-compose logs | grep -i warning
+bar logs | grep -i error
+bar logs | grep -i warning
 
 # Save logs to file
-docker-compose logs > inception_logs_$(date +%Y%m%d).txt
+bar logs > inception_logs_$(date +%Y%m%d).txt
 
 # Monitor logs for specific pattern
-docker-compose logs -f | grep "database"
+bar logs -f | grep "database"
 ```
 
 ### Performance Monitoring
@@ -603,7 +586,7 @@ docker-compose logs -f | grep "database"
 docker stats --no-stream
 
 # Container processes
-docker-compose top
+bar top
 
 # Disk usage
 docker system df
@@ -621,11 +604,11 @@ docker system df -v
 1. Edit the Dockerfile in `srcs/requirements/<service>/`
 2. Rebuild the specific service:
    ```bash
-   docker-compose build --no-cache <service>
+   bar build --no-cache <service>
    ```
 3. Restart the service:
    ```bash
-   docker-compose up -d --force-recreate <service>
+   bar up -d --force-recreate <service>
    ```
 
 #### Modifying Configuration Files
@@ -635,11 +618,11 @@ docker system df -v
 1. Edit `srcs/requirements/nginx/conf/nginx.conf`
 2. Test configuration:
    ```bash
-   docker exec inception_nginx_1 nginx -t
+   docker exec nginx-1 nginx -t
    ```
 3. Reload NGINX:
    ```bash
-   docker exec inception_nginx_1 nginx -s reload
+   docker exec nginx-1 nginx -s reload
    ```
 
 **For PHP-FPM:**
@@ -647,7 +630,7 @@ docker system df -v
 1. Edit `srcs/requirements/wordpress/conf/www.conf`
 2. Restart WordPress container:
    ```bash
-   docker-compose restart wordpress
+   bar restart wordpress
    ```
 
 **For MariaDB:**
@@ -655,23 +638,23 @@ docker system df -v
 1. Edit `srcs/requirements/mariadb/conf/50-server.cnf`
 2. Restart MariaDB container:
    ```bash
-   docker-compose restart mariadb
+   bar restart mariadb
    ```
 
 ### Testing Changes
 
 ```bash
 # Verify services are running
-docker-compose ps
+bar ps
 
 # Check service logs
-docker-compose logs <service>
+bar logs <service>
 
 # Test website accessibility
 curl -k https://tiatan.42.fr
 
 # Test database connection
-docker exec inception_wordpress_1 wp db check --allow-root
+docker exec wordpress-1 wp db check --allow-root
 ```
 
 ---
@@ -712,10 +695,10 @@ docker exec inception_wordpress_1 wp db check --allow-root
 # test.sh
 
 # Build project
-docker-compose build || exit 1
+bar build || exit 1
 
 # Start services
-docker-compose up -d || exit 1
+bar up -d || exit 1
 
 # Wait for services
 sleep 30
@@ -724,13 +707,13 @@ sleep 30
 curl -k -f https://tiatan.42.fr || exit 1
 
 # Test WordPress
-docker exec inception_wordpress_1 wp core is-installed --allow-root || exit 1
+docker exec wordpress-1 wp core is-installed --allow-root || exit 1
 
 # Test MariaDB
-docker exec inception_mariadb_1 mysqladmin -u root -p${MYSQL_ROOT_PASSWORD} ping || exit 1
+docker exec mariadb-1 mysqladmin -u root -p${MYSQL_ROOT_PASSWORD} ping || exit 1
 
 # Cleanup
-docker-compose down -v
+bar down -v
 
 echo "All tests passed!"
 ```
@@ -753,8 +736,8 @@ echo "All tests passed!"
 
 When reporting issues, include:
 
-- Output of `docker-compose ps`
-- Relevant logs from `docker-compose logs`
+- Output of `bar ps`
+- Relevant logs from `bar logs`
 - Steps to reproduce the issue
 - Expected vs. actual behavior
 

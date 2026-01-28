@@ -8,7 +8,7 @@ services:
       - db_password
       - db_root_password
     volumes:
-      - db:/var/lib/mysql
+      - mariadb_data:/var/lib/mysql
     networks:
       - inception
     healthcheck:
@@ -29,7 +29,7 @@ services:
       - wp_admin_password
       - wp_user_password
     volumes:
-      - wp:/var/www/html
+      - wordpress_data:/var/www/html
     networks:
       - inception
     depends_on:
@@ -44,7 +44,7 @@ services:
     ports:
       - "443:443"
     volumes:
-      - wp:/var/www/html
+      - wordpress_data:/var/www/html
       - ./requirements/nginx/tools/ssl/nginx.crt:/etc/ssl/certs/nginx.crt
       - ./requirements/nginx/tools/ssl/nginx.key:/etc/ssl/private/nginx.key
       - ./requirements/nginx/conf/nginx.conf:/etc/nginx/nginx.conf
@@ -56,9 +56,11 @@ services:
     restart: unless-stopped
 
 volumes:
-  db:
+  mariadb_data:
+    name: inception_mariadb_data
     driver: local
-  wp:
+  wordpress_data:
+    name: inception_wordpress_data
     driver: local
 
 secrets:
